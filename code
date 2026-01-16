@@ -1,0 +1,53 @@
+import math
+import time
+import matplotlib.pyplot as plt
+from rplidar import RPLidar
+
+# ---------------- CONFIG ----------------
+PORT_NAME = '/dev/ttyUSB0'   # change if needed
+MAX_RANGE = 6000             # 6 meters
+# ----------------------------------------
+
+def main():
+    lidar = RPLidar(PORT_NAME)
+
+    plt.ion()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='polar')
+
+    scan_plot, = ax.plot([], [], '.', markersize=2)
+
+    ax.set_theta_zero_location('N')
+    ax.set_theta_direction(-1)
+    ax.set_rmax(MAX_RANGE)
+
+    angles = []
+    ranges = []
+
+    try:
+        for _, _, angle, dist in lidar.iter_measures():
+            if dist > 0:
+                angles.append(math.radians(angle))
+                ranges.append(dist)
+
+            # Refresh plot once per revolution
+            if int(angle) == 0:
+                scan_plot.set_xdata(angles)
+                scan_plot.set_ydata(ranges)
+                plt.draw()
+                plt.pause(0.001)
+
+                angles.clear()
+                ranges.clear()
+
+    except KeyboardInterrupt:
+        print("Stopping LiDAR...")
+
+    finally:
+        lidar.stop()
+        lidar.stop_motor()
+        lidar.disconnect()
+        plt.close()
+
+if __name__ == "__main__":
+    main()
